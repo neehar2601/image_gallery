@@ -72,6 +72,7 @@ This project demonstrates two approaches to building an **image gallery hosted o
 │── index.html         # Frontend HTML
 │── script.js          # Fetch & render images from API Gateway
 │── lambda_function.py # Lambda code for dynamic listing
+|── s3Readaccess.json  #policy document to grant required permission to lambda function
 ```
 ### 🔹 Steps
 1. **Create IAM Role for Lambda**
