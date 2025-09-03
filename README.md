@@ -17,17 +17,18 @@ This project demonstrates two approaches to building an **image gallery hosted o
 - - A **JSON index file** (`gallery-index.json`) is generated and uploaded to the bucket.  
 - Frontend (`index.html + script.js`) reads the JSON and displays images.  
 
----
+
 
 ### 🔹 Files
+```
 /static-gallery
 │── index.html # Frontend HTML
 │── script.js # Fetch & render images from JSON
 │── style.css # Styling
 │── generate_index.py # Python script to generate gallery-index.json
+```
 
 
----
 
 ### 🔹 Steps
 1. **Organize Images**
@@ -66,11 +67,12 @@ This project demonstrates two approaches to building an **image gallery hosted o
 - Frontend fetches images from API Gateway instead of static JSON.
 
 ### 🔹 Files
+```
 /dynamic-gallery
 │── index.html         # Frontend HTML
 │── script.js          # Fetch & render images from API Gateway
 │── lambda_function.py # Lambda code for dynamic listing
-
+```
 ### 🔹 Steps
 1. **Create IAM Role for Lambda**
 - Attach AmazonS3ReadOnlyAccess policy.
