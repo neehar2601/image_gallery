@@ -14,7 +14,7 @@ This project demonstrates two approaches to building an **image gallery hosted o
    - One **S3 bucket** hosts both website and images.  
    - Images are organized in **date-based folders**:  
    - s3://my-gallery/images/2025-08-29/
-   - - A **JSON index file** (`gallery-index.json`) is generated and uploaded to the bucket.  
+   - A **JSON index file** (`gallery-index.json`) is generated and uploaded to the bucket.  
    - Frontend (`index.html + script.js`) reads the JSON and displays images.  
 
 
