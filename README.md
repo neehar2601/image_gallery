@@ -92,7 +92,27 @@ This project demonstrates two approaches to building an **image gallery hosted o
   
 ✅ Your dynamic gallery updates in real-time as new images are uploaded.
 
-***
+---
+
+## 🔐 Security Considerations
+- **Restrict public read access** → serve via CloudFront.  
+- **CORS** → configure in API Gateway or return headers in Lambda.  
+- **IAM Policy** → grant Lambda only `s3:ListBucket` and `s3:GetObject`.  
+
+---
+
+## 📊 Comparison
+
+| Feature          | Static JSON Index       | Lambda + API Gateway   |
+|------------------|------------------------|-------------------------|
+| **Complexity**   | Low                    | Medium/High             |
+| **Performance**  | Very fast (cached JSON) | Slightly slower (real-time) |
+| **Cost**         | Almost free            | Pay-per-invoke          |
+| **Updates**      | Manual JSON regen      | Automatic, real-time    |
+| **Best for**     | Small galleries, rarely updated | Larger galleries, frequent uploads |
+
+---
+
   
 
   
