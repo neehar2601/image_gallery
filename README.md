@@ -56,4 +56,40 @@ This project demonstrates two approaches to building an **image gallery hosted o
 
 ✅ Your static gallery is live!
 
+***
+## ⚡ 2. Dynamic Lambda + API Gateway Method
+### 🔹 Architecture
+
+- Images still stored in date-based folders in S3.
+- A Lambda function dynamically lists objects.
+- API Gateway (HTTP API) exposes /images/{date} endpoint.
+- Frontend fetches images from API Gateway instead of static JSON.
+
+### 🔹 Files
+/dynamic-gallery
+│── index.html         # Frontend HTML
+│── script.js          # Fetch & render images from API Gateway
+│── lambda_function.py # Lambda code for dynamic listing
+
+### 🔹 Steps
+1. **Create IAM Role for Lambda**
+- Attach AmazonS3ReadOnlyAccess policy.
+
+2. **Deploy Lambda**
+- Runtime: Python 3.9 or higher.
+- Upload lambda_function.py or copy paste the code.
+
+3. **API Gateway Setup**
+- Create an HTTP API.
+- Add route: GET /images/{date} → Integration = Lambda.
+- Deploy to stage (default or prod).
+
+4. **Upload the Frontend to S3**
+- Enable static website hosting
+  
+✅ Your dynamic gallery updates in real-time as new images are uploaded.
+
+***
+  
+
   
