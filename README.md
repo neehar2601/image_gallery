@@ -94,8 +94,33 @@ This project demonstrates two approaches to building an **image gallery hosted o
 
 ---
 
+## 🌍 3. CloudFront Security & CDN (Recommended)
+
+To secure the gallery and improve performance globally, you can migrate from a public S3 bucket to a **private S3 bucket served via CloudFront**.
+
+### 🔹 Architecture
+- **CloudFront Distribution** acts as the global CDN.
+- **S3 Origin Access Control (OAC)** allows CloudFront to read from the private S3 bucket.
+- **API Gateway Behavior** routes dynamic image API requests to the Lambda function.
+
+### 🔹 Steps to Migrate
+1. **S3 Hardening**: Block ALL public access on the S3 bucket and disable Static Website Hosting.
+2. **Bucket Policy**: Add a policy allowing `s3:GetObject` and `s3:ListBucket` strictly for the CloudFront Service Principal using the OAC condition.
+3. **CloudFront Configuration**:
+   - Create a distribution with two Origins: S3 (with OAC) and API Gateway.
+   - Add Behaviors: 
+     - **Path `/images`** → routes to API Gateway (Caching Disabled).
+     - **Path `/*` (Default)** → routes to S3 OAC (Caching Optimized).
+4. **Update Lambda & Frontend**:
+   - Modify the Lambda function to return **S3 object keys** instead of complete direct S3 URLs.
+   - Update the frontend to use CloudFront URLs based on S3 keys.
+
+This approach ensures zero direct public S3 access and speeds up image delivery globally. For the complete, detailed migration guide, check out the [S3 Private Migration Complete Guide](./Cloudfront/s3-private-migration-complete-guide.md).
+
+---
+
 ## 🔐 Security Considerations
-- **Restrict public read access** → serve via CloudFront.  
+- **Restrict public read access** → serve via CloudFront (as detailed above).  
 - **CORS** → configure in API Gateway or return headers in Lambda.  
 - **IAM Policy** → grant Lambda only `s3:ListBucket` and `s3:GetObject`.  
 
