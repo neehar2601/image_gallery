@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Header with scrolling background */
+        .header-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .scrolling-banner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 300%;
+            height: 100%;
+            display: flex;
+            animation: scrollBanner 60s linear infinite;
+        }
+        
+        .banner-image {
+            flex: 1 0 auto;
+            height: 100%;
+            min-width: 33.333%;
+        }
+        
+        .banner-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .header-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            z-index: 10;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-content p {
+            font-size: 1.2rem;
+            max-width: 80%;
+        }
+        
+        .content-container {
+            padding: 20px;
+        }
+        
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .gallery-item {
+            width: 200px;
+            height: 200px;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            background: #fff;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .lightbox.active {
+            display: flex;
+        }
+        
+        .lightbox-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .lightbox-image {
+            display: block;
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 5px;
+        }
+        
+        .close-lightbox {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            transform: translateY(-50%);
+        }
+        
+        .lightbox-nav button {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 0 10px;
+        }
+        
+        .lightbox-nav button:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        @keyframes scrollBanner {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-66.666%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-container">
+        <div id="scrolling-banner" class="scrolling-banner"></div>
+        <div class="header-content">
+            <h1>Felicity Image Gallery</h1>
+            <p>Click on any image to view full size.</p>
+        </div>
+    </div>
+    
+    <div class="content-container">
+        <div id="gallery" class="gallery">
+            <p>Loading images...</p>
+        </div>
+    </div>
+    
+    <div id="lightbox" class="lightbox">
+        <div class="lightbox-content">
+            <span class="close-lightbox">&times;</span>
+            <img id="lightbox-image" class="lightbox-image" src="" alt="Full size image">
+            <div class="lightbox-nav">
+                <button id="prev-btn">&lt;</button>
+                <button id="next-btn">&gt;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiUrl = '/images';  // Matches your API Gateway path
+            const gallery = document.getElementById('gallery');
+            const scrollingBanner = document.getElementById('scrolling-banner');
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightbox-image');
+            const closeBtn = document.querySelector('.close-lightbox');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            
+            let imageKeys = [];
+            let currentImageIndex = 0;
+            
+            // Fetch image keys from Lambda API
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(keys => {
+                    gallery.innerHTML = '';
+                    imageKeys = keys;
+                    
+                    keys.forEach((key, index) => {
+                        const galleryItem = document.createElement('div');
+                        galleryItem.className = 'gallery-item';
+                        
+                        const img = document.createElement('img');
+                        img.src = window.location.origin + '/' + key;  // CLOUDFRONT URL
+                        img.alt = `Image ${index + 1}`;
+                        img.loading = 'lazy';
+                        
+                        galleryItem.appendChild(img);
+                        gallery.appendChild(galleryItem);
+                        
+                        galleryItem.addEventListener('click', () => openLightbox(key, index));
+                    });
+                    
+                    populateBanner(keys);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    gallery.innerHTML = '<p style="color: red;">Error loading images.</p>';
+                });
+            
+            function populateBanner(keys) {
+                scrollingBanner.innerHTML = '';
+                const bannerKeys = keys.slice(0, Math.min(9, keys.length));
+                
+                bannerKeys.forEach(key => {
+                    const bannerItem = document.createElement('div');
+                    bannerItem.className = 'banner-image';
+                    const img = document.createElement('img');
+                    img.src = window.location.origin + '/' + key;
+                    img.alt = 'Banner image';
+                    img.loading = 'eager';
+                    bannerItem.appendChild(img);
+                    scrollingBanner.appendChild(bannerItem);
+                });
+            }
+            
+            function openLightbox(key, index) {
+                lightboxImage.src = window.location.origin + '/' + key;
+                currentImageIndex = index;
+                lightbox.classList.add('active');
+            }
+            
+            function closeLightbox() {
+                lightbox.classList.remove('active');
+            }
+            
+            function showNextImage() {
+                currentImageIndex = (currentImageIndex + 1) % imageKeys.length;
+                lightboxImage.src = window.location.origin + '/' + imageKeys[currentImageIndex];
+            }
+            
+            function showPrevImage() {
+                currentImageIndex = (currentImageIndex - 1 + imageKeys.length) % imageKeys.length;
+                lightboxImage.src = window.location.origin + '/' + imageKeys[currentImageIndex];
+            }
+            
+            closeBtn.addEventListener('click', closeLightbox);
+            nextBtn.addEventListener('click', showNextImage);
+            prevBtn.addEventListener('click', showPrevImage);
+            
+            lightbox.addEventListener('click', e => {
+                if (e.target === lightbox) closeLightbox();
+            });
+            
+            document.addEventListener('keydown', e => {
+                if (!lightbox.classList.contains('active')) return;
+                if (e.key === 'Escape') closeLightbox();
+                else if (e.key === 'ArrowRight') showNextImage();
+                else if (e.key === 'ArrowLeft') showPrevImage();
+            });
+        });
+    </script>
+</body>
+</html>
+
