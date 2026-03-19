@@ -72,19 +72,65 @@
         
         .content-container {
             padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        
-        .gallery {
+
+        /* Folder Navigation Styles */
+        .folder-nav {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             gap: 15px;
-            margin-top: 20px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .folder-btn {
+            padding: 10px 20px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 25px;
+            background-color: #fff;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            text-transform: capitalize;
+            font-weight: bold;
+        }
+
+        .folder-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .folder-btn.active {
+            background-color: #333;
+            color: #fff;
+        }
+        
+        .folder-section {
+            text-align: left;
+        }
+        
+        .folder-title {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 20px;
+            text-transform: capitalize;
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
         }
         
         .gallery-item {
-            width: 200px;
-            height: 200px;
+            width: 100%;
+            aspect-ratio: 1;
             overflow: hidden;
             border-radius: 10px;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
@@ -186,8 +232,11 @@
     </div>
     
     <div class="content-container">
-        <div id="gallery" class="gallery">
-            <p>Loading images...</p>
+        <!-- New Navigation Area -->
+        <div id="folder-nav" class="folder-nav"></div>
+        
+        <div id="gallery-container">
+            <p id="loading-text">Loading images...</p>
         </div>
     </div>
     
@@ -204,8 +253,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const apiUrl = '/images';  // Matches your API Gateway path
-            const gallery = document.getElementById('gallery');
+            const apiUrl = '/images';
+            const folderNav = document.getElementById('folder-nav');
+            const galleryContainer = document.getElementById('gallery-container');
             const scrollingBanner = document.getElementById('scrolling-banner');
             const lightbox = document.getElementById('lightbox');
             const lightboxImage = document.getElementById('lightbox-image');
@@ -213,37 +263,131 @@
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
             
-            let imageKeys = [];
+            let allImageKeys = [];
+            let groupedImages = {};
             let currentImageIndex = 0;
+            // The currently viewed image list (either all or specific folder)
+            let currentViewKeys = [];
             
-            // Fetch image keys from Lambda API
             fetch(apiUrl)
                 .then(response => response.json())
                 .then(keys => {
-                    gallery.innerHTML = '';
-                    imageKeys = keys;
+                    const documentLoadingText = document.getElementById('loading-text');
+                    if (documentLoadingText) {
+                        documentLoadingText.remove();
+                    }
                     
-                    keys.forEach((key, index) => {
-                        const galleryItem = document.createElement('div');
-                        galleryItem.className = 'gallery-item';
+                    allImageKeys = keys;
+                    currentViewKeys = keys;
+                    
+                    // Group images by folder path
+                    groupedImages = keys.reduce((acc, key) => {
+                        const parts = key.split('/');
+                        let folderName = parts.length > 1 ? parts.slice(0, -1).join('/') : 'Root';
                         
-                        const img = document.createElement('img');
-                        img.src = window.location.origin + '/' + key;  // CLOUDFRONT URL
-                        img.alt = `Image ${index + 1}`;
-                        img.loading = 'lazy';
-                        
-                        galleryItem.appendChild(img);
-                        gallery.appendChild(galleryItem);
-                        
-                        galleryItem.addEventListener('click', () => openLightbox(key, index));
-                    });
+                        if (!acc[folderName]) {
+                            acc[folderName] = [];
+                        }
+                        acc[folderName].push(key);
+                        return acc;
+                    }, {});
+                    
+                    buildNavigation();
+                    
+                    // Default to showing the first folder, or 'All Images' if you prefer. 
+                    // Let's show the first available folder or 'All'
+                    const folders = Object.keys(groupedImages);
+                    if (folders.length > 0) {
+                         // Find the button for the first folder and click it
+                         const firstBtn = folderNav.querySelector('.folder-btn:not([data-folder="All"])');
+                         if(firstBtn) {
+                             firstBtn.click();
+                         } else {
+                             renderGallery(allImageKeys, 'All Images');
+                         }
+                    } else {
+                         renderGallery(allImageKeys, 'All Images');
+                    }
                     
                     populateBanner(keys);
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    gallery.innerHTML = '<p style="color: red;">Error loading images.</p>';
+                    galleryContainer.innerHTML = '<p style="color: red;">Error loading images.</p>';
                 });
+
+            function buildNavigation() {
+                folderNav.innerHTML = '';
+                
+                // Optional: "All" Button
+                const allBtn = document.createElement('button');
+                allBtn.className = 'folder-btn';
+                allBtn.textContent = 'All Images';
+                allBtn.dataset.folder = 'All';
+                allBtn.addEventListener('click', () => {
+                    setActiveNav(allBtn);
+                    renderGallery(allImageKeys, 'All Images');
+                });
+                folderNav.appendChild(allBtn);
+
+                // Individual Folder Buttons
+                Object.keys(groupedImages).forEach(folder => {
+                    const btn = document.createElement('button');
+                    btn.className = 'folder-btn';
+                    btn.textContent = folder === 'Root' ? 'Uncategorized' : folder.replace(/-/g, ' ');
+                    btn.dataset.folder = folder;
+                    
+                    btn.addEventListener('click', () => {
+                        setActiveNav(btn);
+                        renderGallery(groupedImages[folder], btn.textContent);
+                    });
+                    
+                    folderNav.appendChild(btn);
+                });
+            }
+
+            function setActiveNav(selectedBtn) {
+                const buttons = folderNav.querySelectorAll('.folder-btn');
+                buttons.forEach(btn => btn.classList.remove('active'));
+                selectedBtn.classList.add('active');
+            }
+
+            function renderGallery(keysToRender, titleText) {
+                // Update currentViewKeys so lightbox navigation works on the filtered set
+                currentViewKeys = keysToRender;
+                
+                galleryContainer.innerHTML = '';
+                
+                const section = document.createElement('div');
+                section.className = 'folder-section';
+                
+                const title = document.createElement('h2');
+                title.className = 'folder-title';
+                title.textContent = titleText;
+                section.appendChild(title);
+                
+                const galleryGrid = document.createElement('div');
+                galleryGrid.className = 'gallery';
+                
+                keysToRender.forEach((key, index) => {
+                    const galleryItem = document.createElement('div');
+                    galleryItem.className = 'gallery-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = window.location.origin + '/' + key; 
+                    img.alt = `Image in ${titleText}`;
+                    img.loading = 'lazy';
+                    
+                    galleryItem.appendChild(img);
+                    galleryGrid.appendChild(galleryItem);
+                    
+                    // Note we pass the *filtered* index so nav arrows work within the folder
+                    galleryItem.addEventListener('click', () => openLightbox(key, index));
+                });
+                
+                section.appendChild(galleryGrid);
+                galleryContainer.appendChild(section);
+            }
             
             function populateBanner(keys) {
                 scrollingBanner.innerHTML = '';
@@ -272,13 +416,15 @@
             }
             
             function showNextImage() {
-                currentImageIndex = (currentImageIndex + 1) % imageKeys.length;
-                lightboxImage.src = window.location.origin + '/' + imageKeys[currentImageIndex];
+                // Navigate within the currently selected folder/view
+                currentImageIndex = (currentImageIndex + 1) % currentViewKeys.length;
+                lightboxImage.src = window.location.origin + '/' + currentViewKeys[currentImageIndex];
             }
             
             function showPrevImage() {
-                currentImageIndex = (currentImageIndex - 1 + imageKeys.length) % imageKeys.length;
-                lightboxImage.src = window.location.origin + '/' + imageKeys[currentImageIndex];
+                // Navigate within the currently selected folder/view
+                currentImageIndex = (currentImageIndex - 1 + currentViewKeys.length) % currentViewKeys.length;
+                lightboxImage.src = window.location.origin + '/' + currentViewKeys[currentImageIndex];
             }
             
             closeBtn.addEventListener('click', closeLightbox);
